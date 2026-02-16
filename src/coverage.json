@@ -1,0 +1,71 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-16T14:51:45.303Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 3,
+    "implemented": 2,
+    "items": [
+      {
+        "id": "REQ-3",
+        "summary": "Implement a working backend user search API that returns matching user profiles when given a text query (matches by username and by user ID), so the frontend can search and discover other users.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Wire the Friends page search UI to call the backend search API with the actual user-entered search string, and display results reliably (including the “No users found” state) without requiring a page refresh.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/FriendsPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/FriendsPage.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Fix any frontend hook/API mismatches that currently cause search to return no users (e.g., missing backend method name, not passing the query string into the queryFn/queryKey, or calling a non-existent actor method), and ensure the search feature fails gracefully with an English error toast when the backend method is unavailable.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/types/backend-types.ts",
+          "frontend/src/pages/FriendsPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/types/backend-types.ts",
+          "frontend/src/pages/FriendsPage.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/MainLayout.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/FriendsPage.tsx",
+    "frontend/src/pages/ProfilePage.tsx",
+    "frontend/src/pages/UserProfilePage.tsx",
+    "frontend/src/types/backend-types.ts",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

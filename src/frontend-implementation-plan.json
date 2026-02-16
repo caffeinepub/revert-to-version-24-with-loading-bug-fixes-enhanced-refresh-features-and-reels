@@ -1,0 +1,56 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Fix Friends page user search wiring and hook mismatches",
+  "requirements": [
+    {
+      "id": "REQ-4",
+      "summary": "Wire Friends page search input to a React Query search hook that calls backend search with the current query and reliably renders results/loading/empty state without refresh.",
+      "acceptanceCriteria": [
+        "Typing a query into the search input on `frontend/src/pages/FriendsPage.tsx` and pressing Enter or clicking Search triggers a backend search using the current `searchQuery` value.",
+        "Search results render a list of matching profiles with username and @userId as currently designed.",
+        "When there are no matches, the UI shows the existing English message “No users found matching your search.”",
+        "The search button shows a loading state while the request is in-flight and becomes enabled again afterward.",
+        "The implementation uses the existing React Query hook pattern in `frontend/src/hooks/useQueries.ts` (no direct actor calls from the component for searching)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Implement/repair a `useSearchUserProfiles(searchQuery: string)` React Query hook that calls the backend search capability with the provided `searchQuery`, uses a queryKey that includes the search text to avoid stale caching, and returns an array suitable for rendering in Friends search results."
+        },
+        {
+          "path": "frontend/src/pages/FriendsPage.tsx",
+          "operation": "modify",
+          "description": "Update the Friends page search flow to pass the current `searchQuery` into `useSearchUserProfiles(searchQuery)`, trigger `refetch()` on Enter/click, bind the Search button disabled/spinner to in-flight state (prefer React Query `isFetching` for refetch), and keep the existing “No users found matching your search.” empty state behavior."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Fix frontend search hook/API mismatches (method name, query key/query fn wiring, result types) and ensure graceful failure with an English toast when search is unavailable.",
+      "acceptanceCriteria": [
+        "If the backend method required for search is missing, the frontend does not crash; it shows an English toast/error and renders an empty results state.",
+        "React Query keys for search include the search text so new searches are not served stale cached results from a different query.",
+        "The backend candid/type generation aligns with the frontend hook call signature used for searching (no runtime “method not available” warnings for the implemented search method)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Align the search hook with the generated backend interface method name/signature (`searchProfiles(searchQuery: string)`), ensure the queryFn passes the search string, and add graceful handling when the method is missing (show an English toast and resolve to an empty array rather than throwing/unmounting the UI)."
+        },
+        {
+          "path": "frontend/src/types/backend-types.ts",
+          "operation": "modify",
+          "description": "Add/adjust a lightweight search-result type used by Friends search (e.g., `SimplifiedUserProfile`/`SearchResult`) so the search hook and FriendsPage render code match the backend-returned shape (username/name, userId, isPublic, optional displayPic/principal if present) without TypeScript mismatches that can hide real runtime issues."
+        },
+        {
+          "path": "frontend/src/pages/FriendsPage.tsx",
+          "operation": "modify",
+          "description": "Update Friends search result rendering types to use the search-result model returned by the search hook (instead of assuming full `UserProfile`), and ensure that when the hook returns an empty array due to backend unavailability or no matches the page renders the existing empty-results message (and does not require a refresh)."
+        }
+      ]
+    }
+  ]
+}

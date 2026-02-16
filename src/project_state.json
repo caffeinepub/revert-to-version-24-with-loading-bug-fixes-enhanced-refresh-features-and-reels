@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 5,
+  "summary": "Project focused on fixing critical regressions: account deletion is not working; user search is not working. User has now explicitly requested fixing the user search issue.",
+  "architectural_notes": [
+    "Prioritize fixing account deletion before addressing user search.",
+    "User explicitly requested fixing the user search issue (searching other users not working)."
+  ],
+  "known_issues": [
+    "Account deletion is not working for users.",
+    "User search is not returning any users (new or existing friends)."
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-ensure-the-frontend-delete-account-flow-successfully-calls-the-backend-deleteaccount-method-and-fully-resets-the-client-session-so-the-user-is-returned-to-an-unauthenticated-setup-state",
+      "title": "Ensure the frontend Delete Account flow successfully calls the backend `deleteAccount` method and fully resets the client session so the user is returned to an unauthenticated/setup state.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-wire-the-friends-page-search-ui-to-call-the-backend-search-api-with-the-actual-user-entered-search-string-and-display-results-reliably-including-the-no-users-found-state-without-requiring-a-page-refresh",
+      "title": "Wire the Friends page search UI to call the backend search API with the actual user-entered search string, and display results reliably (including the “No users found” state) without requiring a page refresh.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-any-frontend-hook-api-mismatches-that-currently-cause-search-to-return-no-users-e-g-missing-backend-method-name-not-passing-the-query-string-into-the-queryfn-querykey-or-calling-a-non-existent-actor-method-and-ensure-the-search-feature-fails-gracefully-with-an-english-error-toast-when-the-backend-method-is-unavailable",
+      "title": "Fix any frontend hook/API mismatches that currently cause search to return no users (e.g., missing backend method name, not passing the query string into the queryFn/queryKey, or calling a non-existent actor method), and ensure the search feature fails gracefully with an English error toast when the backend method is unavailable.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Fix account deletion so users can delete their account successfully (priority first)",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Fix user search so users can search/find any user (new/old friends)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Implement a working backend account deletion endpoint named `deleteAccount` that allows the authenticated caller to permanently delete their own account and all associated data, without leaving orphaned references.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Implement a working backend user search API that returns matching user profiles when given a text query (matches by username and by user ID), so the frontend can search and discover other users.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    }
+  ],
+  "projectName": "Fix account deletion (deleteAccount) end-to-end",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

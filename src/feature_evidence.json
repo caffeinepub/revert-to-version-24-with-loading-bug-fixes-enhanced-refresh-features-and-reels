@@ -1,0 +1,48 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-wire-the-friends-page-search-ui-to-call-the-backend-search-api-with-the-actual-user-entered-search-string-and-display-results-reliably-including-the-no-users-found-state-without-requiring-a-page-refresh",
+      "featureTitle": "Wire the Friends page search UI to call the backend search API with the actual user-entered search string, and display results reliably (including the “No users found” state) without requiring a page refresh.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/FriendsPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-fix-any-frontend-hook-api-mismatches-that-currently-cause-search-to-return-no-users-e-g-missing-backend-method-name-not-passing-the-query-string-into-the-queryfn-querykey-or-calling-a-non-existent-actor-method-and-ensure-the-search-feature-fails-gracefully-with-an-english-error-toast-when-the-backend-method-is-unavailable",
+      "featureTitle": "Fix any frontend hook/API mismatches that currently cause search to return no users (e.g., missing backend method name, not passing the query string into the queryFn/queryKey, or calling a non-existent actor method), and ensure the search feature fails gracefully with an English error toast when the backend method is unavailable.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/FriendsPage.tsx",
+        "frontend/src/types/backend-types.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

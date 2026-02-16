@@ -1,2 +1,3 @@
-# revert-to-version-24-with-loading-bug-fixes-enhanced-refresh-features-and-reels
-Exported from Caffeine project: Revert to Version 24 with Loading Bug Fixes, Enhanced Refresh Features, and Reels
+## 
+
+To run app build and run docker image: `docker build -t app . docker run -it --network host app`

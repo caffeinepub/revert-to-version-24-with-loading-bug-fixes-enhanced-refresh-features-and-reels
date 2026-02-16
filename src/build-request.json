@@ -1,0 +1,89 @@
+{
+  "kind": "build_request",
+  "title": "Fix user search so users can find other users",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-3",
+      "text": "Implement a working backend user search API that returns matching user profiles when given a text query (matches by username and by user ID), so the frontend can search and discover other users.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "user not able to search the oyher user fix this issue"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Backend exposes a query method for searching users (e.g., `searchUserProfiles(query : Text) : async [UserProfile]`).",
+        "Search performs case-insensitive matching against `UserProfile.name` and `UserProfile.userId` and returns all matches (excluding the caller from results).",
+        "Search returns an empty array (not a trap) when there are no matches.",
+        "Search requires the caller to have `#user` permission (same access pattern as other profile operations).",
+        "Returned `UserProfile` objects are safe to display in search results (no traps related to privacy checks for basic fields like name/userId/isPublic/displayPic)."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Wire the Friends page search UI to call the backend search API with the actual user-entered search string, and display results reliably (including the “No users found” state) without requiring a page refresh.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "user not able to search the oyher user fix this issue"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Typing a query into the search input on `frontend/src/pages/FriendsPage.tsx` and pressing Enter or clicking Search triggers a backend search using the current `searchQuery` value.",
+        "Search results render a list of matching profiles with username and @userId as currently designed.",
+        "When there are no matches, the UI shows the existing English message “No users found matching your search.”",
+        "The search button shows a loading state while the request is in-flight and becomes enabled again afterward.",
+        "The implementation uses the existing React Query hook pattern in `frontend/src/hooks/useQueries.ts` (no direct actor calls from the component for searching)."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Fix any frontend hook/API mismatches that currently cause search to return no users (e.g., missing backend method name, not passing the query string into the queryFn/queryKey, or calling a non-existent actor method), and ensure the search feature fails gracefully with an English error toast when the backend method is unavailable.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "user not able to search the oyher user fix this issue"
+        ]
+      },
+      "acceptanceCriteria": [
+        "If the backend method required for search is missing, the frontend does not crash; it shows an English toast/error and renders an empty results state.",
+        "React Query keys for search include the search text so new searches are not served stale cached results from a different query.",
+        "The backend candid/type generation aligns with the frontend hook call signature used for searching (no runtime “method not available” warnings for the implemented search method)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Backend must remain a single Motoko actor in `backend/main.mo` (no additional backend services).",
+    "Do not edit files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, or any `frontend/src/components/ui` sources; compose them instead.",
+    "Use English for any user-facing text."
+  ],
+  "nonGoals": [
+    "Do not implement third-party search services or external databases.",
+    "Do not redesign the Friends page UI beyond what is required to make search functional and reliable.",
+    "Do not change authentication mechanisms (Internet Identity only)."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
+  }
+}
