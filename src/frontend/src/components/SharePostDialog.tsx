@@ -29,9 +29,9 @@ export default function SharePostDialog({ post, open, onOpenChange }: SharePostD
 
   const handleShare = async (friendPrincipal: Principal) => {
     await sharePost.mutateAsync({
-      recipient: friendPrincipal,
+      friendPrincipal,
       postId: post.id,
-      messageText: message || 'Check out this post!',
+      message: message || 'Check out this post!',
     });
     setMessage('');
     onOpenChange(false);

@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 5,
-  "summary": "Project focused on fixing critical regressions: account deletion is not working; user search is not working. User has now explicitly requested fixing the user search issue.",
+  "projectStateVersion": 9,
+  "summary": "Project focused on fixing critical regressions: chat UI not showing multiple friends; post photos not displaying on feed (only captions show).",
   "architectural_notes": [
-    "Prioritize fixing account deletion before addressing user search.",
-    "User explicitly requested fixing the user search issue (searching other users not working)."
+    "User reported chat UI bug: multiple friends not showing for chat - priority fix.",
+    "User reported feed bug: post photos not displaying, only captions show - priority fix."
   ],
   "known_issues": [
-    "Account deletion is not working for users.",
-    "User search is not returning any users (new or existing friends)."
+    "Chat UI is not showing multiple friends for chat functionality.",
+    "Post photos are not displaying on feed; only captions are visible."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -35,35 +35,59 @@
         "REQ-5"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-frontend-friendspage-to-properly-display-incoming-friend-requests-so-users-can-see-and-respond-to-pending-requests-they-have-received",
+      "title": "Fix the frontend FriendsPage to properly display incoming friend requests so users can see and respond to pending requests they have received.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-frontend-friendspage-to-properly-display-outgoing-friend-requests-so-users-can-see-pending-requests-they-have-sent-and-cancel-them-if-needed",
+      "title": "Fix the frontend FriendsPage to properly display outgoing friend requests so users can see pending requests they have sent and cancel them if needed.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-frontend-friendspage-to-properly-display-the-user-s-existing-friends-list-so-users-can-see-all-their-confirmed-friendships",
+      "title": "Fix the frontend FriendsPage to properly display the user's existing friends list so users can see all their confirmed friendships.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-chatpage-friend-list-sidebar-to-correctly-display-all-friends-so-users-can-see-and-select-multiple-friends-for-chatting-instead-of-seeing-an-empty-or-incomplete-list",
+      "title": "Fix the ChatPage friend list sidebar to correctly display all friends so users can see and select multiple friends for chatting instead of seeing an empty or incomplete list",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-feedpage-postcard-component-to-properly-display-post-images-so-users-can-see-the-photos-in-posts-instead-of-only-seeing-captions",
+      "title": "Fix the FeedPage PostCard component to properly display post images so users can see the photos in posts instead of only seeing captions",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
     {
-      "id": "AR-1",
-      "summary": "Fix account deletion so users can delete their account successfully (priority first)",
-      "reqIds": [],
-      "status": "in_progress"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Fix user search so users can search/find any user (new/old friends)",
+      "id": "AR-12",
+      "summary": "Fix chat UI so multiple friends show correctly for chat",
       "reqIds": [],
       "status": "pending"
     },
     {
-      "id": "AR-3",
-      "summary": "Implement a working backend account deletion endpoint named `deleteAccount` that allows the authenticated caller to permanently delete their own account and all associated data, without leaving orphaned references.",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Implement a working backend user search API that returns matching user profiles when given a text query (matches by username and by user ID), so the frontend can search and discover other users.",
-      "reqIds": [
-        "REQ-3"
-      ],
+      "id": "AR-13",
+      "summary": "Fix feed so post photos display correctly (currently only captions show)",
+      "reqIds": [],
       "status": "pending"
     }
   ],

@@ -6,13 +6,8 @@ import { Loader2, Plus, RefreshCw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ReelCard from '../components/ReelCard';
 import CreateReelDialog from '../components/CreateReelDialog';
-import type { Principal } from '@icp-sdk/core/principal';
 
-interface ReelsPageProps {
-  onViewProfile: (userId: Principal) => void;
-}
-
-export default function ReelsPage({ onViewProfile }: ReelsPageProps) {
+export default function ReelsPage() {
   const { data: reels, isLoading, isFetching, error } = useGetAllReels();
   const [showCreateReel, setShowCreateReel] = useState(false);
   const queryClient = useQueryClient();
@@ -81,7 +76,7 @@ export default function ReelsPage({ onViewProfile }: ReelsPageProps) {
       {reels && reels.length > 0 ? (
         <div className="space-y-6">
           {reels.map((reel) => (
-            <ReelCard key={reel.id} reel={reel} showDelete={false} onViewProfile={onViewProfile} />
+            <ReelCard key={reel.id} reel={reel} showDelete={false} />
           ))}
         </div>
       ) : (
@@ -108,4 +103,3 @@ export default function ReelsPage({ onViewProfile }: ReelsPageProps) {
     </div>
   );
 }
-

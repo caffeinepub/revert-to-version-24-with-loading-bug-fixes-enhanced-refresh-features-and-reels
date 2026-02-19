@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useGetReelLikeCount, useGetReelCommentCount, useHasUserLikedReel, useLikeReel, useUnlikeReel, useGetComments, useAddCommentToReel, useDeleteReel, useGetProfileByPrincipal } from '../hooks/useQueries';
+import { useGetReelLikeCount, useGetReelCommentCount, useHasUserLikedReel, useLikeReel, useUnlikeReel, useAddCommentToReel, useDeleteReel, useGetProfileByPrincipal } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -29,10 +29,9 @@ interface ReelCardProps {
 
 export default function ReelCard({ reel, showDelete, onViewProfile }: ReelCardProps) {
   const { identity } = useInternetIdentity();
-  const { data: likeCount = 0 } = useGetReelLikeCount(reel.id);
-  const { data: commentCount = 0 } = useGetReelCommentCount(reel.id);
+  const { data: likeCount = 0n } = useGetReelLikeCount(reel.id);
+  const { data: commentCount = 0n } = useGetReelCommentCount(reel.id);
   const { data: hasLiked } = useHasUserLikedReel(reel.id);
-  const { data: comments } = useGetComments(reel.id);
   const { data: authorProfile } = useGetProfileByPrincipal(reel.author);
   const likeReel = useLikeReel();
   const unlikeReel = useUnlikeReel();
@@ -143,11 +142,11 @@ export default function ReelCard({ reel, showDelete, onViewProfile }: ReelCardPr
             ) : (
               <Heart className={`h-4 w-4 ${hasLiked ? 'fill-current' : ''}`} />
             )}
-            {likeCount}
+            {Number(likeCount)}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)} className="gap-2">
             <MessageCircle className="h-4 w-4" />
-            {commentCount}
+            {Number(commentCount)}
           </Button>
         </div>
       </CardContent>
@@ -155,26 +154,7 @@ export default function ReelCard({ reel, showDelete, onViewProfile }: ReelCardPr
       {showComments && (
         <CardFooter className="flex-col items-stretch border-t p-4">
           <div className="mb-4 max-h-60 space-y-3 overflow-y-auto">
-            {comments && comments.length > 0 ? (
-              comments.map((comment, index) => (
-                <div key={index} className="flex gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/assets/generated/default-avatar.dim_200x200.png" alt={comment.authorName} />
-                    <AvatarFallback>{comment.authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-semibold">{comment.authorName}</span> {comment.text}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(Number(comment.timestamp) / 1000000).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-sm text-muted-foreground">No comments yet</p>
-            )}
+            <p className="text-center text-sm text-muted-foreground">Comments feature coming soon</p>
           </div>
           <Separator className="mb-4" />
           <div className="flex gap-2">

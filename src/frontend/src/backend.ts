@@ -120,6 +120,10 @@ export interface FeedPost {
     caption?: string;
     image: ExternalBlob;
 }
+export interface FriendRequests {
+    incoming: Array<Principal>;
+    outgoing: Array<Principal>;
+}
 export interface SimplifiedUserProfile {
     principal: Principal;
     userId: string;
@@ -185,6 +189,7 @@ export interface backendInterface {
     adminDeleteAccount(user: Principal): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     cancelFriendRequest(targetUserId: string): Promise<void>;
+    checkIfFriends(user1: Principal, user2: Principal): Promise<boolean>;
     createPost(image: ExternalBlob, caption: string | null): Promise<FeedPost>;
     createReel(videoUrl: ExternalBlob, caption: string | null): Promise<Reel>;
     declineFriendRequest(requesterPrincipal: Principal): Promise<void>;
@@ -197,8 +202,12 @@ export interface backendInterface {
     getAllReels(): Promise<Array<Reel>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getFriendRequests(): Promise<FriendRequests>;
+    getFriends(user: Principal): Promise<Array<Principal>>;
+    getFriendsList(): Promise<Array<Principal>>;
     getMessages(otherUser: Principal): Promise<Array<Message>>;
     getNotifications(): Promise<Array<Notification>>;
+    getPendingRequests(user: Principal): Promise<Array<Principal>>;
     getPostById(postId: string): Promise<FeedPost | null>;
     getPostCommentCount(postId: string): Promise<bigint>;
     getPostLikeCount(postId: string): Promise<bigint>;
@@ -407,6 +416,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async checkIfFriends(arg0: Principal, arg1: Principal): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.checkIfFriends(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.checkIfFriends(arg0, arg1);
+            return result;
+        }
+    }
     async createPost(arg0: ExternalBlob, arg1: string | null): Promise<FeedPost> {
         if (this.processError) {
             try {
@@ -575,6 +598,48 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n24(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getFriendRequests(): Promise<FriendRequests> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getFriendRequests();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getFriendRequests();
+            return result;
+        }
+    }
+    async getFriends(arg0: Principal): Promise<Array<Principal>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getFriends(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getFriends(arg0);
+            return result;
+        }
+    }
+    async getFriendsList(): Promise<Array<Principal>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getFriendsList();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getFriendsList();
+            return result;
+        }
+    }
     async getMessages(arg0: Principal): Promise<Array<Message>> {
         if (this.processError) {
             try {
@@ -601,6 +666,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getNotifications();
             return from_candid_vec_n33(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getPendingRequests(arg0: Principal): Promise<Array<Principal>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPendingRequests(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPendingRequests(arg0);
+            return result;
         }
     }
     async getPostById(arg0: string): Promise<FeedPost | null> {

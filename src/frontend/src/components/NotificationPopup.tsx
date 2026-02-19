@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import type { Notification } from '../types/backend-types';
-import { NotificationType } from '../types/backend-types';
+import type { Notification } from '../backend';
+import { NotificationType } from '../backend';
 import { formatDistanceToNow } from 'date-fns';
 
 interface NotificationPopupProps {

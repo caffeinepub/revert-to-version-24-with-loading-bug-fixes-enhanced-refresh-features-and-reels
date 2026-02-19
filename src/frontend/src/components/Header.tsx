@@ -21,7 +21,7 @@ import {
 import { Home, MessageCircle, User, Users, LogOut, Moon, Sun, Bell, Film } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { formatDistanceToNow } from 'date-fns';
-import type { Notification } from '../types/backend-types';
+import type { Notification } from '../backend';
 
 type Tab = 'feed' | 'reels' | 'chat' | 'profile' | 'friends';
 

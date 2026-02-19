@@ -1,54 +1,45 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix Friends page user search wiring and hook mismatches",
+  "title": "Fix chat UI friend list and feed post image display",
   "requirements": [
     {
-      "id": "REQ-4",
-      "summary": "Wire Friends page search input to a React Query search hook that calls backend search with the current query and reliably renders results/loading/empty state without refresh.",
+      "id": "REQ-9",
+      "summary": "Fix the ChatPage friend list sidebar to correctly display all friends for chat selection",
       "acceptanceCriteria": [
-        "Typing a query into the search input on `frontend/src/pages/FriendsPage.tsx` and pressing Enter or clicking Search triggers a backend search using the current `searchQuery` value.",
-        "Search results render a list of matching profiles with username and @userId as currently designed.",
-        "When there are no matches, the UI shows the existing English message “No users found matching your search.”",
-        "The search button shows a loading state while the request is in-flight and becomes enabled again afterward.",
-        "The implementation uses the existing React Query hook pattern in `frontend/src/hooks/useQueries.ts` (no direct actor calls from the component for searching)."
+        "All confirmed friends appear in the chat sidebar friend list",
+        "Users can click on any friend to open a chat conversation",
+        "The friend list updates when friendships are added or removed",
+        "Empty state displays appropriately when user has no friends"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/pages/ChatPage.tsx",
           "operation": "modify",
-          "description": "Implement/repair a `useSearchUserProfiles(searchQuery: string)` React Query hook that calls the backend search capability with the provided `searchQuery`, uses a queryKey that includes the search text to avoid stale caching, and returns an array suitable for rendering in Friends search results."
+          "description": "Fix the friend list rendering logic in the sidebar by ensuring the useGetFriendsList query data is properly mapped to display all friends. Update the friend list UI to show friend profiles with avatars and names, ensure click handlers properly set the selectedFriend state, add proper loading and error states for the friends query, and display an appropriate empty state when the user has no friends yet."
         },
         {
-          "path": "frontend/src/pages/FriendsPage.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update the Friends page search flow to pass the current `searchQuery` into `useSearchUserProfiles(searchQuery)`, trigger `refetch()` on Enter/click, bind the Search button disabled/spinner to in-flight state (prefer React Query `isFetching` for refetch), and keep the existing “No users found matching your search.” empty state behavior."
+          "description": "Review and verify the useGetFriendsList hook returns the correct data structure (Array<Principal>) and ensure it properly fetches all confirmed friends. Add error handling if the query fails and ensure the query is enabled only when the actor is available."
         }
       ]
     },
     {
-      "id": "REQ-5",
-      "summary": "Fix frontend search hook/API mismatches (method name, query key/query fn wiring, result types) and ensure graceful failure with an English toast when search is unavailable.",
+      "id": "REQ-10",
+      "summary": "Fix the FeedPage PostCard component to properly display post images",
       "acceptanceCriteria": [
-        "If the backend method required for search is missing, the frontend does not crash; it shows an English toast/error and renders an empty results state.",
-        "React Query keys for search include the search text so new searches are not served stale cached results from a different query.",
-        "The backend candid/type generation aligns with the frontend hook call signature used for searching (no runtime “method not available” warnings for the implemented search method)."
+        "Post images render correctly in the feed when posts have images attached",
+        "Image URLs are properly constructed from backend blob data",
+        "Images display with appropriate dimensions and aspect ratios",
+        "Posts without images still display captions correctly",
+        "Loading states show while images are being fetched"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/components/PostCard.tsx",
           "operation": "modify",
-          "description": "Align the search hook with the generated backend interface method name/signature (`searchProfiles(searchQuery: string)`), ensure the queryFn passes the search string, and add graceful handling when the method is missing (show an English toast and resolve to an empty array rather than throwing/unmounting the UI)."
-        },
-        {
-          "path": "frontend/src/types/backend-types.ts",
-          "operation": "modify",
-          "description": "Add/adjust a lightweight search-result type used by Friends search (e.g., `SimplifiedUserProfile`/`SearchResult`) so the search hook and FriendsPage render code match the backend-returned shape (username/name, userId, isPublic, optional displayPic/principal if present) without TypeScript mismatches that can hide real runtime issues."
-        },
-        {
-          "path": "frontend/src/pages/FriendsPage.tsx",
-          "operation": "modify",
-          "description": "Update Friends search result rendering types to use the search-result model returned by the search hook (instead of assuming full `UserProfile`), and ensure that when the hook returns an empty array due to backend unavailability or no matches the page renders the existing empty-results message (and does not require a refresh)."
+          "description": "Fix the post image rendering by ensuring the ExternalBlob.getDirectURL() method is called correctly on post.image to generate the image URL. Verify the img element src attribute is set to this URL, add proper loading states with a skeleton or spinner while the image loads, handle image load errors gracefully with a fallback, and ensure the image container maintains proper aspect ratios using Tailwind classes. The ExternalBlob type from the blob-storage component provides the getDirectURL() method for streaming and caching support."
         }
       ]
     }

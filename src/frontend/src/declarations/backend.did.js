@@ -48,6 +48,10 @@ export const UserProfile = IDL.Record({
   'isPublic' : IDL.Bool,
   'displayPic' : IDL.Opt(ExternalBlob),
 });
+export const FriendRequests = IDL.Record({
+  'incoming' : IDL.Vec(IDL.Principal),
+  'outgoing' : IDL.Vec(IDL.Principal),
+});
 export const MessageStatus = IDL.Variant({
   'deleted' : IDL.Null,
   'normal' : IDL.Null,
@@ -126,6 +130,11 @@ export const idlService = IDL.Service({
   'adminDeleteAccount' : IDL.Func([IDL.Principal], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'cancelFriendRequest' : IDL.Func([IDL.Text], [], []),
+  'checkIfFriends' : IDL.Func(
+      [IDL.Principal, IDL.Principal],
+      [IDL.Bool],
+      ['query'],
+    ),
   'createPost' : IDL.Func([ExternalBlob, IDL.Opt(IDL.Text)], [FeedPost], []),
   'createReel' : IDL.Func([ExternalBlob, IDL.Opt(IDL.Text)], [Reel], []),
   'declineFriendRequest' : IDL.Func([IDL.Principal], [], []),
@@ -138,8 +147,16 @@ export const idlService = IDL.Service({
   'getAllReels' : IDL.Func([], [IDL.Vec(Reel)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getFriendRequests' : IDL.Func([], [FriendRequests], ['query']),
+  'getFriends' : IDL.Func([IDL.Principal], [IDL.Vec(IDL.Principal)], ['query']),
+  'getFriendsList' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
   'getMessages' : IDL.Func([IDL.Principal], [IDL.Vec(Message)], ['query']),
   'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
+  'getPendingRequests' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(IDL.Principal)],
+      ['query'],
+    ),
   'getPostById' : IDL.Func([IDL.Text], [IDL.Opt(FeedPost)], ['query']),
   'getPostCommentCount' : IDL.Func([IDL.Text], [IDL.Nat], ['query']),
   'getPostLikeCount' : IDL.Func([IDL.Text], [IDL.Nat], ['query']),
@@ -227,6 +244,10 @@ export const idlFactory = ({ IDL }) => {
     'isPublic' : IDL.Bool,
     'displayPic' : IDL.Opt(ExternalBlob),
   });
+  const FriendRequests = IDL.Record({
+    'incoming' : IDL.Vec(IDL.Principal),
+    'outgoing' : IDL.Vec(IDL.Principal),
+  });
   const MessageStatus = IDL.Variant({
     'deleted' : IDL.Null,
     'normal' : IDL.Null,
@@ -305,6 +326,11 @@ export const idlFactory = ({ IDL }) => {
     'adminDeleteAccount' : IDL.Func([IDL.Principal], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'cancelFriendRequest' : IDL.Func([IDL.Text], [], []),
+    'checkIfFriends' : IDL.Func(
+        [IDL.Principal, IDL.Principal],
+        [IDL.Bool],
+        ['query'],
+      ),
     'createPost' : IDL.Func([ExternalBlob, IDL.Opt(IDL.Text)], [FeedPost], []),
     'createReel' : IDL.Func([ExternalBlob, IDL.Opt(IDL.Text)], [Reel], []),
     'declineFriendRequest' : IDL.Func([IDL.Principal], [], []),
@@ -317,8 +343,20 @@ export const idlFactory = ({ IDL }) => {
     'getAllReels' : IDL.Func([], [IDL.Vec(Reel)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getFriendRequests' : IDL.Func([], [FriendRequests], ['query']),
+    'getFriends' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(IDL.Principal)],
+        ['query'],
+      ),
+    'getFriendsList' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
     'getMessages' : IDL.Func([IDL.Principal], [IDL.Vec(Message)], ['query']),
     'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
+    'getPendingRequests' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(IDL.Principal)],
+        ['query'],
+      ),
     'getPostById' : IDL.Func([IDL.Text], [IDL.Opt(FeedPost)], ['query']),
     'getPostCommentCount' : IDL.Func([IDL.Text], [IDL.Nat], ['query']),
     'getPostLikeCount' : IDL.Func([IDL.Text], [IDL.Nat], ['query']),

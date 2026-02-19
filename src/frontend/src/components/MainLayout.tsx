@@ -11,8 +11,8 @@ import { NotificationPopupContainer } from './NotificationPopup';
 import { useNotificationPolling } from '../hooks/useNotificationPolling';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Principal } from '@icp-sdk/core/principal';
-import type { Notification } from '../types/backend-types';
-import { NotificationType } from '../types/backend-types';
+import type { Notification } from '../backend';
+import { NotificationType } from '../backend';
 
 type MainTab = 'feed' | 'reels' | 'chat' | 'profile' | 'friends';
 type ViewState = 
@@ -135,16 +135,13 @@ export default function MainLayout() {
 
       <main className="flex-1 overflow-y-auto">
         {viewState.type === 'main' && viewState.tab === 'feed' && (
-          <FeedPage onViewProfile={handleViewUserProfile} />
+          <FeedPage />
         )}
         {viewState.type === 'main' && viewState.tab === 'reels' && (
-          <ReelsPage onViewProfile={handleViewUserProfile} />
+          <ReelsPage />
         )}
         {viewState.type === 'main' && viewState.tab === 'chat' && (
-          <ChatPage 
-            onViewProfile={handleViewUserProfile}
-            onViewPost={handleViewPost}
-          />
+          <ChatPage />
         )}
         {viewState.type === 'main' && viewState.tab === 'profile' && <ProfilePage />}
         {viewState.type === 'main' && viewState.tab === 'friends' && (
@@ -157,67 +154,57 @@ export default function MainLayout() {
           <UserProfilePage userId={viewState.userId} onBack={() => handleBackToMain('friends')} />
         )}
         {viewState.type === 'chat' && (
-          <ChatPage 
-            initialFriendId={viewState.friendId}
-            onViewProfile={handleViewUserProfile}
-            onViewPost={handleViewPost}
-          />
+          <ChatPage />
         )}
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="sticky bottom-0 z-10 border-t bg-card md:hidden">
-        <div className="flex items-center justify-around px-2 py-3">
-          <button
-            onClick={() => handleTabChange('feed')}
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'feed' ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <Home className="h-6 w-6" />
-            <span className="text-xs font-medium">Feed</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('reels')}
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'reels' ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <Film className="h-6 w-6" />
-            <span className="text-xs font-medium">Reels</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('friends')}
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'friends' ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <Users className="h-6 w-6" />
-            <span className="text-xs font-medium">Friends</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('chat')}
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'chat' ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <MessageCircle className="h-6 w-6" />
-            <span className="text-xs font-medium">Chat</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('profile')}
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'profile' ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <User className="h-6 w-6" />
-            <span className="text-xs font-medium">Profile</span>
-          </button>
-        </div>
+      <nav className="sticky bottom-0 z-10 flex items-center justify-around border-t bg-card p-2 md:hidden">
+        <button
+          onClick={() => handleTabChange('feed')}
+          className={`flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+            activeTab === 'feed' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          <Home className="h-5 w-5" />
+          <span className="text-xs">Feed</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('reels')}
+          className={`flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+            activeTab === 'reels' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          <Film className="h-5 w-5" />
+          <span className="text-xs">Reels</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('friends')}
+          className={`flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+            activeTab === 'friends' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          <span className="text-xs">Friends</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('chat')}
+          className={`flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+            activeTab === 'chat' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          <MessageCircle className="h-5 w-5" />
+          <span className="text-xs">Chat</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('profile')}
+          className={`flex flex-col items-center gap-1 rounded-lg p-2 transition-colors ${
+            activeTab === 'profile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          <User className="h-5 w-5" />
+          <span className="text-xs">Profile</span>
+        </button>
       </nav>
     </div>
   );

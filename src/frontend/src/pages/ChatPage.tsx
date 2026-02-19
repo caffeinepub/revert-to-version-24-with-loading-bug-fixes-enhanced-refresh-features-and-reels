@@ -1,812 +1,466 @@
-import { useState, useEffect, useRef } from 'react';
-import { useGetFriends, useGetMessages, useGetSharedPostMessages, useSendMessage, useGetProfileByPrincipal, useEditMessage, useDeleteMessage } from '../hooks/useQueries';
+import React, { useState, useEffect, useRef } from 'react';
+import { useActor } from '../hooks/useActor';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useSendMessage, useGetMessages, useEditMessage, useDeleteMessage, useGetFriendsList, useGetCallerUserProfile } from '../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Send, Loader2, MessageCircle, Image as ImageIcon, Video, X, Menu, Pencil, Trash2, Check } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ExternalBlob } from '../backend';
-import { MessageStatus } from '../types/backend-types';
+import { Card } from '@/components/ui/card';
+import { Loader2, Send, Image as ImageIcon, Video as VideoIcon, Edit2, Trash2, X } from 'lucide-react';
+import { ExternalBlob, MessageStatus } from '../backend';
 import type { Principal } from '@icp-sdk/core/principal';
-import type { Message, SharedPostMessage } from '../types/backend-types';
-import { toast } from 'sonner';
+import type { Message, UserProfile } from '../backend';
 
-interface ChatPageProps {
-  initialFriendId?: Principal;
-  onViewProfile?: (userId: Principal) => void;
-  onViewPost?: (postId: string) => void;
-}
-
-function FriendListItem({ friendPrincipal, isSelected, onClick }: { friendPrincipal: Principal; isSelected: boolean; onClick: () => void }) {
-  const { data: profile } = useGetProfileByPrincipal(friendPrincipal);
-  const avatarUrl = profile?.displayPic?.getDirectURL() || '/assets/generated/default-avatar.dim_200x200.png';
-
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${
-        isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-      }`}
-    >
-      <Avatar className="h-10 w-10">
-        <AvatarImage src={avatarUrl} alt={profile?.name || 'User'} />
-        <AvatarFallback>{profile?.name?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 overflow-hidden">
-        <p className="truncate font-medium">{profile?.name || 'Unknown User'}</p>
-      </div>
-    </button>
-  );
-}
-
-function SharedPostPreview({ 
-  sharedPost, 
-  onViewProfile, 
-  onViewPost 
-}: { 
-  sharedPost: SharedPostMessage; 
-  onViewProfile?: (userId: Principal) => void;
-  onViewPost?: (postId: string) => void;
-}) {
-  const { data: postAuthorProfile } = useGetProfileByPrincipal(sharedPost.post.author);
-  const postAuthorAvatarUrl = postAuthorProfile?.displayPic?.getDirectURL() || '/assets/generated/default-avatar.dim_200x200.png';
-
-  const handleProfileClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onViewProfile) {
-      onViewProfile(sharedPost.post.author);
-    }
-  };
-
-  const handlePostClick = () => {
-    if (onViewPost) {
-      onViewPost(sharedPost.post.id);
-    }
-  };
-
-  return (
-    <div className="mt-2 rounded-lg border bg-card p-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={handlePostClick}>
-      <div 
-        className="mb-2 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
-        onClick={handleProfileClick}
-      >
-        <Avatar className="h-6 w-6">
-          <AvatarImage src={postAuthorAvatarUrl} alt={sharedPost.post.authorName} />
-          <AvatarFallback>{sharedPost.post.authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        <p className="text-xs font-semibold">{sharedPost.post.authorName}</p>
-      </div>
-      <img 
-        src={sharedPost.post.image.getDirectURL()} 
-        alt="Shared post" 
-        className="mb-2 w-full rounded-lg object-cover max-h-48"
-      />
-      <p className="text-xs text-muted-foreground line-clamp-2">{sharedPost.post.caption}</p>
-    </div>
-  );
-}
-
-function FriendsList({ 
-  friends, 
-  selectedFriend, 
-  onSelectFriend 
-}: { 
-  friends: Principal[]; 
-  selectedFriend: Principal | null; 
-  onSelectFriend: (friend: Principal) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      {friends.map((friend) => (
-        <FriendListItem
-          key={friend.toString()}
-          friendPrincipal={friend}
-          isSelected={selectedFriend?.toString() === friend.toString()}
-          onClick={() => onSelectFriend(friend)}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MessageBubble({
-  message,
-  isCurrentUser,
-  timestamp,
-  selectedProfile,
-  selectedAvatarUrl,
-  onEdit,
-  onDelete,
-  isEditing,
-  editText,
-  onEditTextChange,
-  onSaveEdit,
-  onCancelEdit,
-}: {
-  message: Message;
-  isCurrentUser: boolean;
-  timestamp: Date;
-  selectedProfile: any;
-  selectedAvatarUrl: string;
-  onEdit: () => void;
-  onDelete: () => void;
-  isEditing: boolean;
-  editText: string;
-  onEditTextChange: (text: string) => void;
-  onSaveEdit: () => void;
-  onCancelEdit: () => void;
-}) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
-  const [showMobileActions, setShowMobileActions] = useState(false);
-  const isDeleted = message.status === MessageStatus.deleted;
-  const isEdited = message.status === MessageStatus.edited;
-
-  const handleTouchStart = () => {
-    if (isCurrentUser && !isDeleted) {
-      const timer = setTimeout(() => {
-        setShowMobileActions(true);
-      }, 500);
-      setTouchTimer(timer);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (touchTimer) {
-      clearTimeout(touchTimer);
-      setTouchTimer(null);
-    }
-  };
-
-  const handleMobileEdit = () => {
-    setShowMobileActions(false);
-    onEdit();
-  };
-
-  const handleMobileDelete = () => {
-    setShowMobileActions(false);
-    onDelete();
-  };
-
-  return (
-    <div
-      className={`flex gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage
-          src={isCurrentUser ? '/assets/generated/default-avatar.dim_200x200.png' : selectedAvatarUrl}
-          alt="User"
-        />
-        <AvatarFallback className="text-xs">
-          {isCurrentUser ? 'ME' : selectedProfile?.name?.slice(0, 2).toUpperCase() || 'U'}
-        </AvatarFallback>
-      </Avatar>
-      <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-        <span className="text-xs text-muted-foreground">
-          {formatDistanceToNow(timestamp, { addSuffix: true })}
-        </span>
-        <div className="relative group">
-          {isDeleted ? (
-            <div className="mt-1 max-w-[85vw] md:max-w-md rounded-2xl bg-muted/50 px-4 py-2">
-              <p className="text-sm italic text-muted-foreground">Message deleted</p>
-            </div>
-          ) : isEditing ? (
-            <div className="mt-1 max-w-[85vw] md:max-w-md">
-              <div className="flex gap-2">
-                <Input
-                  value={editText}
-                  onChange={(e) => onEditTextChange(e.target.value)}
-                  className="flex-1"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      onSaveEdit();
-                    } else if (e.key === 'Escape') {
-                      onCancelEdit();
-                    }
-                  }}
-                />
-                <Button size="icon" variant="ghost" onClick={onSaveEdit} className="h-9 w-9">
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={onCancelEdit} className="h-9 w-9">
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div
-                className={`mt-1 max-w-[85vw] md:max-w-md overflow-hidden rounded-2xl ${
-                  isCurrentUser
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
-              >
-                {message.content.photo && (
-                  <img
-                    src={message.content.photo.getDirectURL()}
-                    alt="Shared photo"
-                    className="max-h-64 w-full object-cover"
-                  />
-                )}
-                {message.content.video && (
-                  <video
-                    src={message.content.video.getDirectURL()}
-                    controls
-                    className="max-h-64 w-full"
-                  />
-                )}
-                {message.content.text && (
-                  <p className="px-4 py-2 text-sm break-words">{message.content.text}</p>
-                )}
-              </div>
-              {isEdited && (
-                <span className="text-xs text-muted-foreground italic mt-1">(edited)</span>
-              )}
-              {/* Desktop hover controls */}
-              {isCurrentUser && isHovered && (
-                <div className={`hidden md:flex absolute top-1/2 -translate-y-1/2 gap-1 ${isCurrentUser ? 'left-0 -translate-x-full -ml-2' : 'right-0 translate-x-full mr-2'}`}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
-                    onClick={onEdit}
-                    title="Edit message"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-destructive hover:text-destructive-foreground shadow-sm"
-                    onClick={onDelete}
-                    title="Delete message"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
-              {/* Mobile touch actions */}
-              {showMobileActions && isCurrentUser && (
-                <div className="md:hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowMobileActions(false)}>
-                  <div className="bg-background rounded-lg p-4 m-4 space-y-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-2"
-                      onClick={handleMobileEdit}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Edit message
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-                      onClick={handleMobileDelete}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete message
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      onClick={() => setShowMobileActions(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SharedMessageBubble({
-  sharedPost,
-  isCurrentUser,
-  timestamp,
-  selectedProfile,
-  selectedAvatarUrl,
-  onViewProfile,
-  onViewPost,
-}: {
-  sharedPost: SharedPostMessage;
-  isCurrentUser: boolean;
-  timestamp: Date;
-  selectedProfile: any;
-  selectedAvatarUrl: string;
-  onViewProfile?: (userId: Principal) => void;
-  onViewPost?: (postId: string) => void;
-}) {
-  return (
-    <div className={`flex gap-3 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-      <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage
-          src={isCurrentUser ? '/assets/generated/default-avatar.dim_200x200.png' : selectedAvatarUrl}
-          alt="User"
-        />
-        <AvatarFallback className="text-xs">
-          {isCurrentUser ? 'ME' : selectedProfile?.name?.slice(0, 2).toUpperCase() || 'U'}
-        </AvatarFallback>
-      </Avatar>
-      <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-        <span className="text-xs text-muted-foreground">
-          {formatDistanceToNow(timestamp, { addSuffix: true })}
-        </span>
-        <div className="relative group">
-          <div
-            className={`mt-1 max-w-[85vw] md:max-w-md overflow-hidden rounded-2xl ${
-              isCurrentUser
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted'
-            }`}
-          >
-            {sharedPost.message.text && (
-              <p className="px-4 py-2 text-sm break-words">{sharedPost.message.text}</p>
-            )}
-            <div className="px-4 pb-4">
-              <SharedPostPreview 
-                sharedPost={sharedPost} 
-                onViewProfile={onViewProfile}
-                onViewPost={onViewPost}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function ChatPage({ initialFriendId, onViewProfile, onViewPost }: ChatPageProps) {
-  const { data: friends, isLoading: friendsLoading } = useGetFriends();
-  const [selectedFriend, setSelectedFriend] = useState<Principal | null>(initialFriendId || null);
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-  const { data: messages, isLoading: messagesLoading } = useGetMessages(selectedFriend);
-  const { data: sharedPostMessages } = useGetSharedPostMessages(selectedFriend);
-  const { data: selectedProfile } = useGetProfileByPrincipal(selectedFriend);
-  const sendMessage = useSendMessage();
-  const editMessage = useEditMessage();
-  const deleteMessage = useDeleteMessage();
+export default function ChatPage() {
+  const { actor } = useActor();
   const { identity } = useInternetIdentity();
+  const [selectedFriend, setSelectedFriend] = useState<Principal | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [mediaPreview, setMediaPreview] = useState<{ type: 'photo' | 'video'; url: string; file: File } | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [editingMessageId, setEditingMessageId] = useState<bigint | null>(null);
-  const [editingText, setEditingText] = useState('');
-  const [deleteConfirmId, setDeleteConfirmId] = useState<bigint | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [editText, setEditText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, sharedPostMessages]);
+  const { data: friendsList = [], isLoading: friendsLoading, error: friendsError } = useGetFriendsList();
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useGetMessages(selectedFriend);
+  const sendMessageMutation = useSendMessage();
+  const editMessageMutation = useEditMessage();
+  const deleteMessageMutation = useDeleteMessage();
+  const { data: userProfile } = useGetCallerUserProfile();
+
+  const [friendProfiles, setFriendProfiles] = useState<Map<string, UserProfile>>(new Map());
 
   useEffect(() => {
-    if (initialFriendId) {
-      setSelectedFriend(initialFriendId);
-    } else if (friends && friends.length > 0 && !selectedFriend) {
-      setSelectedFriend(friends[0]);
-    }
-  }, [friends, selectedFriend, initialFriendId]);
+    const loadFriendProfiles = async () => {
+      if (!actor || friendsList.length === 0) return;
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const profiles = new Map<string, UserProfile>();
+      for (const friendPrincipal of friendsList) {
+        try {
+          const profile = await actor.getUserProfile(friendPrincipal);
+          if (profile) {
+            profiles.set(friendPrincipal.toString(), profile);
+          }
+        } catch (error) {
+          console.error('Error loading friend profile:', error);
+        }
+      }
+      setFriendProfiles(profiles);
+    };
+
+    loadFriendProfiles();
+  }, [actor, friendsList]);
+
+  useEffect(() => {
+    if (selectedFriend) {
+      const interval = setInterval(() => {
+        refetchMessages();
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedFriend, refetchMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      setMediaPreview({ type: 'photo', url, file });
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+      setVideoFile(null);
+      setVideoPreview(null);
     }
   };
 
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('video/')) {
-        toast.error('Please select a video file');
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      setMediaPreview({ type: 'video', url, file });
+      setVideoFile(file);
+      setVideoPreview(URL.createObjectURL(file));
+      setPhotoFile(null);
+      setPhotoPreview(null);
     }
   };
 
-  const clearMediaPreview = () => {
-    if (mediaPreview) {
-      URL.revokeObjectURL(mediaPreview.url);
-    }
-    setMediaPreview(null);
+  const clearMedia = () => {
+    setPhotoFile(null);
+    setVideoFile(null);
+    setPhotoPreview(null);
+    setVideoPreview(null);
     setUploadProgress(0);
     if (photoInputRef.current) photoInputRef.current.value = '';
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFriend) return;
-
-    // Must have either text or media
-    if (!messageText.trim() && !mediaPreview) return;
+  const handleSendMessage = async () => {
+    if (!selectedFriend || (!messageText.trim() && !photoFile && !videoFile)) return;
 
     try {
-      if (mediaPreview) {
-        const arrayBuffer = await mediaPreview.file.arrayBuffer();
+      let photoBlob: ExternalBlob | null = null;
+      let videoBlob: ExternalBlob | null = null;
+
+      if (photoFile) {
+        const arrayBuffer = await photoFile.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
-        const blob = ExternalBlob.fromBytes(uint8Array).withUploadProgress((percentage) => {
+        photoBlob = ExternalBlob.fromBytes(uint8Array).withUploadProgress((percentage) => {
           setUploadProgress(percentage);
         });
+      }
 
-        await sendMessage.mutateAsync({
-          recipient: selectedFriend,
-          text: messageText.trim(),
-          photo: mediaPreview.type === 'photo' ? blob : null,
-          video: mediaPreview.type === 'video' ? blob : null,
-        });
-        clearMediaPreview();
-      } else {
-        await sendMessage.mutateAsync({
-          recipient: selectedFriend,
-          text: messageText.trim(),
-          photo: null,
-          video: null,
+      if (videoFile) {
+        const arrayBuffer = await videoFile.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        videoBlob = ExternalBlob.fromBytes(uint8Array).withUploadProgress((percentage) => {
+          setUploadProgress(percentage);
         });
       }
+
+      await sendMessageMutation.mutateAsync({
+        recipient: selectedFriend,
+        text: messageText.trim() || '',
+        photo: photoBlob,
+        video: videoBlob,
+      });
+
       setMessageText('');
+      clearMedia();
+      refetchMessages();
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Error sending message:', error);
     }
   };
 
-  const handleHeaderClick = () => {
-    if (selectedFriend && onViewProfile) {
-      onViewProfile(selectedFriend);
-    }
-  };
-
-  const handleSelectFriend = (friend: Principal) => {
-    setSelectedFriend(friend);
-    setMobileSheetOpen(false);
-  };
-
-  const handleEditMessage = (messageId: bigint, currentText: string) => {
-    setEditingMessageId(messageId);
-    setEditingText(currentText);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingMessageId || !editingText.trim()) return;
+  const handleEditMessage = async (messageId: bigint) => {
+    if (!editText.trim()) return;
 
     try {
-      await editMessage.mutateAsync({
-        messageId: editingMessageId,
-        newText: editingText.trim(),
+      await editMessageMutation.mutateAsync({
+        messageId,
+        newText: editText.trim(),
       });
       setEditingMessageId(null);
-      setEditingText('');
+      setEditText('');
+      refetchMessages();
     } catch (error) {
-      console.error('Failed to edit message:', error);
+      console.error('Error editing message:', error);
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingMessageId(null);
-    setEditingText('');
-  };
-
-  const handleDeleteMessage = (messageId: bigint) => {
-    setDeleteConfirmId(messageId);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteConfirmId) return;
-
+  const handleDeleteMessage = async (messageId: bigint) => {
     try {
-      await deleteMessage.mutateAsync(deleteConfirmId);
-      setDeleteConfirmId(null);
+      await deleteMessageMutation.mutateAsync(messageId);
+      refetchMessages();
     } catch (error) {
-      console.error('Failed to delete message:', error);
+      console.error('Error deleting message:', error);
     }
   };
 
-  const currentUserPrincipal = identity?.getPrincipal().toString();
-  const selectedAvatarUrl = selectedProfile?.displayPic?.getDirectURL() || '/assets/generated/default-avatar.dim_200x200.png';
-  const isSending = sendMessage.isPending;
+  const startEditing = (message: Message, messageId: bigint) => {
+    setEditingMessageId(messageId);
+    setEditText(message.content.text);
+  };
 
-  // Merge messages and shared posts, sorted by timestamp
-  const allMessages: Array<{ type: 'message' | 'shared'; data: Message | SharedPostMessage; timestamp: number; messageId?: bigint }> = [];
-  
-  if (messages) {
-    messages.forEach((msg) => {
-      allMessages.push({ 
-        type: 'message', 
-        data: msg, 
-        timestamp: Number(msg.content.timestamp),
-        messageId: msg.content.timestamp
-      });
-    });
-  }
-  
-  if (sharedPostMessages) {
-    sharedPostMessages.forEach(shared => {
-      allMessages.push({ type: 'shared', data: shared, timestamp: Number(shared.message.timestamp) });
-    });
-  }
-  
-  allMessages.sort((a, b) => a.timestamp - b.timestamp);
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditText('');
+  };
 
-  if (friendsLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const getMessageStatus = (message: Message) => {
+    if (message.status === MessageStatus.deleted) return '(deleted)';
+    if (message.status === MessageStatus.edited) return '(edited)';
+    return '';
+  };
 
-  if (!friends || friends.length === 0) {
-    return (
-      <div className="container mx-auto flex h-full max-w-4xl items-center justify-center px-4 py-6">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <img
-              src="/assets/generated/chat-icon-transparent.dim_64x64.png"
-              alt="No friends"
-              className="mb-4 h-16 w-16 opacity-50"
-            />
-            <h3 className="mb-2 text-lg font-semibold">No friends to chat with</h3>
-            <p className="text-muted-foreground">Add friends to start chatting!</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const selectedFriendProfile = selectedFriend ? friendProfiles.get(selectedFriend.toString()) : null;
 
   return (
-    <div className="container mx-auto flex h-[calc(100vh-8rem)] max-w-6xl gap-4 px-4 py-6 md:h-[calc(100vh-4rem)]">
-      {/* Desktop Friends List */}
-      <Card className="hidden w-80 md:block">
-        <CardContent className="p-4">
-          <h3 className="mb-4 font-semibold">Friends</h3>
-          <ScrollArea className="h-[calc(100vh-14rem)]">
-            <FriendsList 
-              friends={friends}
-              selectedFriend={selectedFriend}
-              onSelectFriend={handleSelectFriend}
-            />
+    <div className="flex h-[calc(100vh-8rem)] gap-4">
+      {/* Friends Sidebar */}
+      <Card className="w-80 p-4 flex flex-col">
+        <h2 className="text-xl font-bold mb-4">Friends</h2>
+        {friendsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : friendsError ? (
+          <div className="text-center py-8 text-destructive">
+            Error loading friends
+          </div>
+        ) : friendsList.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No friends yet. Add friends to start chatting!
+          </div>
+        ) : (
+          <ScrollArea className="flex-1">
+            <div className="space-y-2">
+              {friendsList.map((friendPrincipal) => {
+                const profile = friendProfiles.get(friendPrincipal.toString());
+                const isSelected = selectedFriend?.toString() === friendPrincipal.toString();
+                
+                return (
+                  <button
+                    key={friendPrincipal.toString()}
+                    onClick={() => setSelectedFriend(friendPrincipal)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-accent'
+                    }`}
+                  >
+                    <Avatar className="h-10 w-10">
+                      {profile?.displayPic ? (
+                        <AvatarImage src={profile.displayPic.getDirectURL()} alt={profile.name} />
+                      ) : null}
+                      <AvatarFallback>
+                        {profile?.name?.charAt(0).toUpperCase() || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left">
+                      <p className="font-medium truncate">
+                        {profile?.name || 'Loading...'}
+                      </p>
+                      <p className="text-sm opacity-70 truncate">
+                        @{profile?.userId || friendPrincipal.toString().slice(0, 8)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </ScrollArea>
-        </CardContent>
+        )}
       </Card>
 
       {/* Chat Area */}
-      <div className="flex flex-1 flex-col">
-        {selectedFriend && (
+      <Card className="flex-1 flex flex-col">
+        {!selectedFriend ? (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            Select a friend to start chatting
+          </div>
+        ) : (
           <>
-            {/* Chat Header with Mobile Menu Button */}
-            <div className="mb-4 flex items-center gap-2 rounded-lg border bg-card p-4">
-              {/* Mobile Friends List Toggle */}
-              <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-80 p-0">
-                  <SheetHeader className="border-b p-4">
-                    <SheetTitle>Friends</SheetTitle>
-                  </SheetHeader>
-                  <ScrollArea className="h-[calc(100vh-5rem)] p-4">
-                    <FriendsList 
-                      friends={friends}
-                      selectedFriend={selectedFriend}
-                      onSelectFriend={handleSelectFriend}
-                    />
-                  </ScrollArea>
-                </SheetContent>
-              </Sheet>
-
-              {/* Chat Header Info */}
-              <button 
-                onClick={handleHeaderClick}
-                className="flex flex-1 items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={selectedAvatarUrl} alt={selectedProfile?.name || 'User'} />
-                  <AvatarFallback>{selectedProfile?.name?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
-                </Avatar>
-                <div className="text-left">
-                  <h2 className="font-semibold">{selectedProfile?.name || 'Unknown User'}</h2>
-                  <p className="text-sm text-muted-foreground">Online</p>
-                </div>
-              </button>
+            {/* Chat Header */}
+            <div className="p-4 border-b flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                {selectedFriendProfile?.displayPic ? (
+                  <AvatarImage src={selectedFriendProfile.displayPic.getDirectURL()} alt={selectedFriendProfile.name} />
+                ) : null}
+                <AvatarFallback>
+                  {selectedFriendProfile?.name?.charAt(0).toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold">{selectedFriendProfile?.name || 'Loading...'}</p>
+                <p className="text-sm text-muted-foreground">
+                  @{selectedFriendProfile?.userId || selectedFriend.toString().slice(0, 8)}
+                </p>
+              </div>
             </div>
 
-            <ScrollArea className="flex-1 rounded-lg border bg-card/50 p-4" ref={scrollRef}>
-              <div className="space-y-4">
-                {messagesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : allMessages.length > 0 ? (
-                  allMessages.map((item, index) => {
-                    if (item.type === 'message') {
-                      const message = item.data as Message;
-                      const isCurrentUser = message.content.sender.toString() === currentUserPrincipal;
-                      const timestamp = new Date(Number(message.content.timestamp) / 1000000);
-                      const messageId = item.messageId || message.content.timestamp;
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-4">
+              {messagesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No messages yet. Start the conversation!
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((msg, index) => {
+                    const isOwnMessage = msg.content.sender.toString() === identity?.getPrincipal().toString();
+                    const messageId = BigInt(index);
+                    const isDeleted = msg.status === MessageStatus.deleted;
 
-                      return (
-                        <MessageBubble
-                          key={`msg-${index}`}
-                          message={message}
-                          isCurrentUser={isCurrentUser}
-                          timestamp={timestamp}
-                          selectedProfile={selectedProfile}
-                          selectedAvatarUrl={selectedAvatarUrl}
-                          onEdit={() => handleEditMessage(messageId, message.content.text)}
-                          onDelete={() => handleDeleteMessage(messageId)}
-                          isEditing={editingMessageId === messageId}
-                          editText={editingText}
-                          onEditTextChange={setEditingText}
-                          onSaveEdit={handleSaveEdit}
-                          onCancelEdit={handleCancelEdit}
-                        />
-                      );
-                    } else {
-                      const sharedPost = item.data as SharedPostMessage;
-                      const isCurrentUser = sharedPost.message.sender.toString() === currentUserPrincipal;
-                      const timestamp = new Date(Number(sharedPost.message.timestamp) / 1000000);
-
-                      return (
-                        <SharedMessageBubble
-                          key={`shared-${index}`}
-                          sharedPost={sharedPost}
-                          isCurrentUser={isCurrentUser}
-                          timestamp={timestamp}
-                          selectedProfile={selectedProfile}
-                          selectedAvatarUrl={selectedAvatarUrl}
-                          onViewProfile={onViewProfile}
-                          onViewPost={onViewPost}
-                        />
-                      );
-                    }
-                  })
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center py-16 text-center">
-                    <MessageCircle className="mb-2 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
-                  </div>
-                )}
-              </div>
+                    return (
+                      <div
+                        key={index}
+                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[70%] rounded-lg p-3 ${
+                            isOwnMessage
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          {isDeleted ? (
+                            <p className="italic opacity-70">{getMessageStatus(msg)}</p>
+                          ) : (
+                            <>
+                              {msg.content.photo && (
+                                <img
+                                  src={msg.content.photo.getDirectURL()}
+                                  alt="Shared photo"
+                                  className="rounded-lg mb-2 max-w-full"
+                                />
+                              )}
+                              {msg.content.video && (
+                                <video
+                                  src={msg.content.video.getDirectURL()}
+                                  controls
+                                  className="rounded-lg mb-2 max-w-full"
+                                />
+                              )}
+                              {editingMessageId === messageId ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    className="min-h-[60px]"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleEditMessage(messageId)}
+                                      disabled={editMessageMutation.isPending}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={cancelEditing}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {msg.content.text}
+                                  </p>
+                                  {msg.status === MessageStatus.edited && (
+                                    <p className="text-xs opacity-70 mt-1">{getMessageStatus(msg)}</p>
+                                  )}
+                                </>
+                              )}
+                              {isOwnMessage && !isDeleted && editingMessageId !== messageId && (
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={() => startEditing(msg, messageId)}
+                                    className="opacity-70 hover:opacity-100"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteMessage(messageId)}
+                                    className="opacity-70 hover:opacity-100"
+                                    disabled={deleteMessageMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </ScrollArea>
 
-            {/* Media Preview */}
-            {mediaPreview && (
-              <div className="mt-4 rounded-lg border bg-card p-4">
-                <div className="flex items-start gap-3">
-                  <div className="relative flex-1">
-                    {mediaPreview.type === 'photo' ? (
-                      <img
-                        src={mediaPreview.url}
-                        alt="Preview"
-                        className="max-h-32 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <video
-                        src={mediaPreview.url}
-                        className="max-h-32 rounded-lg"
-                        controls
-                      />
-                    )}
-                    {uploadProgress > 0 && uploadProgress < 100 && (
-                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
-                        <span className="text-sm font-medium text-white">{uploadProgress}%</span>
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={clearMediaPreview}
-                    disabled={isSending}
+            {/* Message Input */}
+            <div className="p-4 border-t space-y-3">
+              {(photoPreview || videoPreview) && (
+                <div className="relative inline-block">
+                  {photoPreview && (
+                    <img src={photoPreview} alt="Preview" className="max-h-32 rounded-lg" />
+                  )}
+                  {videoPreview && (
+                    <video src={videoPreview} className="max-h-32 rounded-lg" controls />
+                  )}
+                  <button
+                    onClick={clearMedia}
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1"
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </button>
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="absolute bottom-2 left-2 right-2 bg-background/80 rounded-full h-2">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={sendMessageMutation.isPending}
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={sendMessageMutation.isPending}
+                >
+                  <VideoIcon className="h-5 w-5" />
+                </Button>
+                <Input
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Type a message..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  disabled={sendMessageMutation.isPending}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={sendMessageMutation.isPending || (!messageText.trim() && !photoFile && !videoFile)}
+                >
+                  {sendMessageMutation.isPending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </Button>
               </div>
-            )}
-
-            <form onSubmit={handleSend} className="mt-4 flex gap-2">
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoSelect}
-                className="hidden"
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleVideoSelect}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => photoInputRef.current?.click()}
-                disabled={isSending || !!mediaPreview}
-                title="Send photo"
-              >
-                <ImageIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => videoInputRef.current?.click()}
-                disabled={isSending || !!mediaPreview}
-                title="Send video"
-              >
-                <Video className="h-4 w-4" />
-              </Button>
-              <Input
-                placeholder="Type a message..."
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                className="flex-1"
-                disabled={isSending}
-              />
-              <Button type="submit" disabled={isSending || (!messageText.trim() && !mediaPreview)}>
-                {isSending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </form>
+            </div>
           </>
         )}
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Message</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this message? This action cannot be undone and the message will be removed for both participants.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      </Card>
     </div>
   );
 }
-

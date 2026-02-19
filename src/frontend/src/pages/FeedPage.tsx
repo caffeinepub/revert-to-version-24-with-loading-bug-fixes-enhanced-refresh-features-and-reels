@@ -6,13 +6,8 @@ import { Loader2, Plus, RefreshCw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import PostCard from '../components/PostCard';
 import CreatePostDialog from '../components/CreatePostDialog';
-import type { Principal } from '@icp-sdk/core/principal';
 
-interface FeedPageProps {
-  onViewProfile: (userId: Principal) => void;
-}
-
-export default function FeedPage({ onViewProfile }: FeedPageProps) {
+export default function FeedPage() {
   const { data: posts, isLoading, isFetching, error } = useGetAllPosts();
   const [showCreatePost, setShowCreatePost] = useState(false);
   const queryClient = useQueryClient();
@@ -71,7 +66,7 @@ export default function FeedPage({ onViewProfile }: FeedPageProps) {
       {posts && posts.length > 0 ? (
         <div className="space-y-6">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} showDelete={false} onViewProfile={onViewProfile} />
+            <PostCard key={post.id} post={post} showDelete={false} />
           ))}
         </div>
       ) : (
@@ -98,4 +93,3 @@ export default function FeedPage({ onViewProfile }: FeedPageProps) {
     </div>
   );
 }
-

@@ -38,6 +38,10 @@ export interface FeedPost {
     caption?: string;
     image: ExternalBlob;
 }
+export interface FriendRequests {
+    incoming: Array<Principal>;
+    outgoing: Array<Principal>;
+}
 export interface SimplifiedUserProfile {
     principal: Principal;
     userId: string;
@@ -92,6 +96,7 @@ export interface backendInterface {
     adminDeleteAccount(user: Principal): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     cancelFriendRequest(targetUserId: string): Promise<void>;
+    checkIfFriends(user1: Principal, user2: Principal): Promise<boolean>;
     createPost(image: ExternalBlob, caption: string | null): Promise<FeedPost>;
     createReel(videoUrl: ExternalBlob, caption: string | null): Promise<Reel>;
     declineFriendRequest(requesterPrincipal: Principal): Promise<void>;
@@ -104,8 +109,12 @@ export interface backendInterface {
     getAllReels(): Promise<Array<Reel>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getFriendRequests(): Promise<FriendRequests>;
+    getFriends(user: Principal): Promise<Array<Principal>>;
+    getFriendsList(): Promise<Array<Principal>>;
     getMessages(otherUser: Principal): Promise<Array<Message>>;
     getNotifications(): Promise<Array<Notification>>;
+    getPendingRequests(user: Principal): Promise<Array<Principal>>;
     getPostById(postId: string): Promise<FeedPost | null>;
     getPostCommentCount(postId: string): Promise<bigint>;
     getPostLikeCount(postId: string): Promise<bigint>;

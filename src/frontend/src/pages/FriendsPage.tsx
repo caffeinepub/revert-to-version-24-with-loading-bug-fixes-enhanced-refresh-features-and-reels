@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { useGetFriends, useGetPendingRequests, useAcceptFriendRequest, useDeclineFriendRequest, useRemoveFriend, useGetProfileByPrincipal, useSendFriendRequest, useCheckFriendshipStatus, useSearchUserProfiles, useGetProfileByUserId, useCancelFriendRequest } from '../hooks/useQueries';
-import { useActor } from '../hooks/useActor';
+import { useGetFriendsList, useGetFriendRequests, useAcceptFriendRequest, useDeclineFriendRequest, useRemoveFriend, useGetProfileByPrincipal, useSendFriendRequest, useCheckFriendshipStatus, useSearchUserProfiles, useGetProfileByUserId, useCancelFriendRequest } from '../hooks/useQueries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,9 +17,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Loader2, UserCheck, UserX, UserMinus, Search, Lock, Globe, UserPlus, X, AlertCircle } from 'lucide-react';
+import { Loader2, UserCheck, UserX, UserMinus, Search, Lock, Globe, UserPlus, X } from 'lucide-react';
 import { Principal } from '@icp-sdk/core/principal';
-import type { UserProfile } from '../types/backend-types';
 import type { SimplifiedUserProfile } from '../backend';
 
 interface FriendsPageProps {
@@ -110,36 +107,48 @@ function FriendCard({
 }
 
 function RequestCard({ 
-  requesterProfile, 
+  requesterPrincipal, 
   onAccept, 
   onDecline 
 }: { 
-  requesterProfile: UserProfile; 
-  onAccept: (profile: UserProfile) => void; 
-  onDecline: (profile: UserProfile) => void;
+  requesterPrincipal: Principal; 
+  onAccept: (p: Principal) => void; 
+  onDecline: (p: Principal) => void;
 }) {
-  const avatarUrl = requesterProfile.displayPic?.getDirectURL() || '/assets/generated/default-avatar.dim_200x200.png';
+  const { data: profile, isLoading } = useGetProfileByPrincipal(requesterPrincipal);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center gap-3 p-4">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const avatarUrl = profile?.displayPic?.getDirectURL() || '/assets/generated/default-avatar.dim_200x200.png';
 
   return (
     <Card>
       <CardContent className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={avatarUrl} alt={requesterProfile.name} />
-            <AvatarFallback>{requesterProfile.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={avatarUrl} alt={profile?.name || 'User'} />
+            <AvatarFallback>{profile?.name?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-semibold">{requesterProfile.name}</p>
-            <p className="text-xs text-muted-foreground">@{requesterProfile.userId}</p>
+            <p className="font-semibold">{profile?.name || 'Unknown User'}</p>
+            <p className="text-xs text-muted-foreground">@{profile?.userId || 'N/A'}</p>
             <p className="text-sm text-muted-foreground">Wants to be friends</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="default" size="sm" onClick={() => onAccept(requesterProfile)}>
+          <Button variant="default" size="sm" onClick={() => onAccept(requesterPrincipal)}>
             <UserCheck className="mr-1 h-4 w-4" />
             Accept
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onDecline(requesterProfile)}>
+          <Button variant="ghost" size="sm" onClick={() => onDecline(requesterPrincipal)}>
             <UserX className="h-4 w-4" />
           </Button>
         </div>
@@ -156,9 +165,16 @@ function SearchResultCard({
   onViewProfile?: (userId: string) => void;
 }) {
   const { data: profileByUserId } = useGetProfileByUserId(profile.userId);
-  const { isFriend, isPendingReceived, isPendingSent, isCurrentUser } = useCheckFriendshipStatus(profile.principal);
+  const friendshipStatus = useCheckFriendshipStatus(profile.principal);
   const sendRequest = useSendFriendRequest();
   const cancelRequest = useCancelFriendRequest();
+
+  const { isFriend, isPendingReceived, isPendingSent, isCurrentUser } = friendshipStatus.data || {
+    isFriend: false,
+    isPendingReceived: false,
+    isPendingSent: false,
+    isCurrentUser: false,
+  };
 
   const handleSendRequest = async () => {
     await sendRequest.mutateAsync(profile.userId);
@@ -256,31 +272,27 @@ function SearchResultCard({
 
 export default function FriendsPage({ onViewProfile }: FriendsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const { actor } = useActor();
-  const { data: friends, isLoading: friendsLoading, error: friendsError } = useGetFriends();
-  const { data: pendingRequests, isLoading: requestsLoading, error: requestsError } = useGetPendingRequests();
+  const { data: friends, isLoading: friendsLoading } = useGetFriendsList();
+  const { data: friendRequests, isLoading: requestsLoading } = useGetFriendRequests();
   const acceptRequest = useAcceptFriendRequest();
   const declineRequest = useDeclineFriendRequest();
   const removeFriend = useRemoveFriend();
   const { data: searchResults, isFetching: searchLoading } = useSearchUserProfiles(searchQuery);
 
-  const handleAccept = async (requesterProfile: UserProfile) => {
-    // Since backend expects Principal but we only have UserProfile, we need to look up the Principal
-    // For now, this is a stub since the backend method isn't fully implemented
-    console.warn('Accept friend request not fully implemented - backend needs Principal');
+  const handleAccept = async (requesterPrincipal: Principal) => {
+    await acceptRequest.mutateAsync(requesterPrincipal);
   };
 
-  const handleDecline = async (requesterProfile: UserProfile) => {
-    // Since backend expects Principal but we only have UserProfile, we need to look up the Principal
-    // For now, this is a stub since the backend method isn't fully implemented
-    console.warn('Decline friend request not fully implemented - backend needs Principal');
+  const handleDecline = async (requesterPrincipal: Principal) => {
+    await declineRequest.mutateAsync(requesterPrincipal);
   };
 
   const handleRemove = async (friend: Principal) => {
     await removeFriend.mutateAsync(friend);
   };
 
-  const pendingCount = pendingRequests?.length || 0;
+  const incomingRequests = friendRequests?.incoming || [];
+  const pendingCount = incomingRequests.length;
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6">
@@ -347,15 +359,6 @@ export default function FriendsPage({ onViewProfile }: FriendsPageProps) {
         </TabsList>
 
         <TabsContent value="friends" className="mt-6">
-          {friendsError && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Backend Feature Unavailable</AlertTitle>
-              <AlertDescription>
-                The friends list feature is currently unavailable. The backend needs to be updated with the required methods.
-              </AlertDescription>
-            </Alert>
-          )}
           {friendsLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -381,7 +384,7 @@ export default function FriendsPage({ onViewProfile }: FriendsPageProps) {
                 />
                 <h3 className="mb-2 text-lg font-semibold">No friends yet</h3>
                 <p className="text-muted-foreground">
-                  {friendsError ? 'Friends feature is currently unavailable.' : 'Start connecting with people!'}
+                  Start connecting with people!
                 </p>
               </CardContent>
             </Card>
@@ -389,25 +392,16 @@ export default function FriendsPage({ onViewProfile }: FriendsPageProps) {
         </TabsContent>
 
         <TabsContent value="requests" className="mt-6">
-          {requestsError && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Backend Feature Unavailable</AlertTitle>
-              <AlertDescription>
-                The friend requests feature is currently unavailable. The backend needs to be updated with the required methods.
-              </AlertDescription>
-            </Alert>
-          )}
           {requestsLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : pendingRequests && pendingRequests.length > 0 ? (
+          ) : incomingRequests.length > 0 ? (
             <div className="space-y-3">
-              {pendingRequests.map((requester) => (
+              {incomingRequests.map((requester) => (
                 <RequestCard
-                  key={requester.userId}
-                  requesterProfile={requester}
+                  key={requester.toString()}
+                  requesterPrincipal={requester}
                   onAccept={handleAccept}
                   onDecline={handleDecline}
                 />
@@ -419,7 +413,7 @@ export default function FriendsPage({ onViewProfile }: FriendsPageProps) {
                 <UserCheck className="mb-4 h-16 w-16 text-muted-foreground/50" />
                 <h3 className="mb-2 text-lg font-semibold">No pending requests</h3>
                 <p className="text-muted-foreground">
-                  {requestsError ? 'Friend requests feature is currently unavailable.' : "You're all caught up!"}
+                  You're all caught up!
                 </p>
               </CardContent>
             </Card>

@@ -100,6 +100,11 @@ actor {
     status : MessageStatus;
   };
 
+  public type FriendRequests = {
+    incoming : [Principal];
+    outgoing : [Principal];
+  };
+
   let posts = Map.empty<Text, FeedPost>();
   let reels = Map.empty<Text, Reel>();
   let comments = Map.empty<Text, [Comment]>();
@@ -1003,6 +1008,97 @@ actor {
     switch (comments.get(reelId)) {
       case (?reelComments) { reelComments.size() };
       case (null) { 0 };
+    };
+  };
+
+  public query ({ caller }) func getFriendsList() : async [Principal] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view their friends list");
+    };
+    switch (friends.get(caller)) {
+      case (?friendSet) {
+        friendSet.toArray();
+      };
+      case (null) { [] };
+    };
+  };
+
+  public query ({ caller }) func getFriends(user : Principal) : async [Principal] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view friends");
+    };
+
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      switch (profiles.get(user)) {
+        case (?profile) {
+          if (not profile.isPublic and not areFriends(caller, user)) {
+            Runtime.trap("Unauthorized: Can only view friends list of public profiles or your friends");
+          };
+        };
+        case (null) {
+          Runtime.trap("User profile not found");
+        };
+      };
+    };
+
+    switch (friends.get(user)) {
+      case (?friends) {
+        friends.toArray();
+      };
+      case (null) { [] };
+    };
+  };
+
+  public query ({ caller }) func getFriendRequests() : async FriendRequests {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view friend requests");
+    };
+
+    let incoming = switch (friendRequests.get(caller)) {
+      case (?requests) {
+        requests.filter(func(p) { p != caller }).toArray();
+      };
+      case (null) { [] };
+    };
+
+    let outgoingIter = friendRequests.entries();
+    let outgoingList = List.empty<Principal>();
+
+    for ((principal, requests) in outgoingIter) {
+      if (requests.contains(caller)) {
+        outgoingList.add(principal);
+      };
+    };
+
+    let outgoing = outgoingList.toArray();
+
+    {
+      incoming;
+      outgoing;
+    };
+  };
+
+  public query ({ caller }) func checkIfFriends(user1 : Principal, user2 : Principal) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can check if users are friends");
+    };
+    areFriends(user1, user2);
+  };
+
+  public query ({ caller }) func getPendingRequests(user : Principal) : async [Principal] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get pending requests");
+    };
+
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own pending requests");
+    };
+
+    switch (friendRequests.get(user)) {
+      case (?requests) {
+        requests.toArray();
+      };
+      case (null) { [] };
     };
   };
 };

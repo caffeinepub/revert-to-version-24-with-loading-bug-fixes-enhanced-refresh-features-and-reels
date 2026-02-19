@@ -19,6 +19,10 @@ export interface FeedPost {
   'caption' : [] | [string],
   'image' : ExternalBlob,
 }
+export interface FriendRequests {
+  'incoming' : Array<Principal>,
+  'outgoing' : Array<Principal>,
+}
 export interface Message {
   'status' : MessageStatus,
   'content' : MessageContent,
@@ -110,6 +114,7 @@ export interface _SERVICE {
   'adminDeleteAccount' : ActorMethod<[Principal], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'cancelFriendRequest' : ActorMethod<[string], undefined>,
+  'checkIfFriends' : ActorMethod<[Principal, Principal], boolean>,
   'createPost' : ActorMethod<[ExternalBlob, [] | [string]], FeedPost>,
   'createReel' : ActorMethod<[ExternalBlob, [] | [string]], Reel>,
   'declineFriendRequest' : ActorMethod<[Principal], undefined>,
@@ -122,8 +127,12 @@ export interface _SERVICE {
   'getAllReels' : ActorMethod<[], Array<Reel>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getFriendRequests' : ActorMethod<[], FriendRequests>,
+  'getFriends' : ActorMethod<[Principal], Array<Principal>>,
+  'getFriendsList' : ActorMethod<[], Array<Principal>>,
   'getMessages' : ActorMethod<[Principal], Array<Message>>,
   'getNotifications' : ActorMethod<[], Array<Notification>>,
+  'getPendingRequests' : ActorMethod<[Principal], Array<Principal>>,
   'getPostById' : ActorMethod<[string], [] | [FeedPost]>,
   'getPostCommentCount' : ActorMethod<[string], bigint>,
   'getPostLikeCount' : ActorMethod<[string], bigint>,
